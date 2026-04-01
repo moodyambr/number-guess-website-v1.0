@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Number Guess Game</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══ BACKGROUND FX ═══ -->
+<div id="cursor-glow"></div>
+<div class="bg-blobs">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<header>
+  <h1>🎲 Number Guess Game</h1>
+  <div class="header-controls">
+    <div id="status-bar">
+      <span id="status-player">Ingen spelare</span>
+      <span class="divider">|</span>
+      <span id="status-game">Inget spel</span>
+      <span class="divider">|</span>
+      <span id="status-game-status">–</span>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()" title="Byt tema">☀️ Ljust läge</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════ NAVIGATION ═══════════════════════ -->
+<nav class="tabs">
+  <button class="tab-btn active" onclick="showTab('play')">🎮 Spela</button>
+  <button class="tab-btn" onclick="showTab('players')">👤 Spelare</button>
+  <button class="tab-btn" onclick="showTab('games')">🎯 Spel</button>
+  <button class="tab-btn" onclick="showTab('guesses')">🔍 Gissningar</button>
+</nav>
+
+<main>
+
+  <!-- ══════════ TAB: PLAY ══════════ -->
+  <section id="tab-play" class="tab-content">
+
+    <div class="card">
+      <h2>Steg 1 – Skapa spelare</h2>
+      <div class="row">
+        <input type="text" id="play-username" placeholder="Ditt användarnamn" />
+        <button onclick="playCreatePlayer()">Skapa spelare</button>
+      </div>
+      <p class="feedback" id="fb-player"></p>
+    </div>
+
+    <div class="card">
+      <h2>Steg 2 – Starta spel</h2>
+      <p class="hint">Gissa ett hemligt tal mellan <strong>1 och 5</strong></p>
+      <button onclick="playStartGame()" id="btn-start-game" disabled>Starta spel</button>
+      <p class="feedback" id="fb-game"></p>
+    </div>
+
+    <div class="card">
+      <h2>Steg 3 – Gissa</h2>
+      <div class="row">
+        <input type="number" id="play-guess" placeholder="1 – 5" min="1" max="5" />
+        <button onclick="playMakeGuess()" id="btn-guess" disabled>Gissa</button>
+      </div>
+      <div id="guess-result-box" class="result-box hidden"></div>
+      <p class="feedback" id="fb-guess"></p>
+    </div>
+
+    <div class="card">
+      <h2>📜 Gissningshistorik</h2>
+      <button onclick="playLoadHistory()" id="btn-history" disabled>Ladda historik</button>
+      <table id="history-table" class="hidden">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Gissning</th>
+            <th>Resultat</th>
+          </tr>
+        </thead>
+        <tbody id="history-body"></tbody>
+      </table>
+      <p class="feedback" id="fb-history"></p>
+    </div>
+
+  </section>
+
+  <!-- ══════════ TAB: PLAYERS ══════════ -->
+  <section id="tab-players" class="tab-content hidden">
+
+
+    <div class="card">
+      <h2>🔍 Hämta spelare (GET)</h2>
+      <div class="row">
+        <input type="number" id="p-get-id" placeholder="Spelar-ID" />
+        <button onclick="playerGet()">Hämta</button>
+      </div>
+      <pre class="output" id="p-get-output"></pre>
+    </div>
+
+    <div class="card">
+      <h2>✏️ Uppdatera spelare (PUT)</h2>
+      <div class="row">
+        <input type="number" id="p-update-id" placeholder="Spelar-ID" />
+        <input type="text" id="p-update-username" placeholder="Nytt användarnamn" />
+        <button onclick="playerUpdate()">Uppdatera</button>
+      </div>
+      <pre class="output" id="p-update-output"></pre>
+    </div>
+
+    <div class="card">
+      <h2>🗑️ Ta bort spelare (DELETE)</h2>
+      <div class="row">
+        <input type="number" id="p-delete-id" placeholder="Spelar-ID" />
+        <button class="btn-danger" onclick="playerDelete()">Ta bort</button>
+      </div>
+      <pre class="output" id="p-delete-output"></pre>
+    </div>
+
+  </section>
+
+  <!-- ══════════ TAB: GAMES ══════════ -->
+  <section id="tab-games" class="tab-content hidden">
+
+
+    <div class="card">
+      <h2>🔍 Hämta spel (GET)</h2>
+      <div class="row">
+        <input type="number" id="g-get-id" placeholder="Spel-ID" />
+        <button onclick="gameGet()">Hämta</button>
+      </div>
+      <pre class="output" id="g-get-output"></pre>
+    </div>
+
+    <div class="card">
+      <h2>🗑️ Ta bort spel (DELETE)</h2>
+      <div class="row">
+        <input type="number" id="g-delete-id" placeholder="Spel-ID" />
+        <button class="btn-danger" onclick="gameDelete()">Ta bort</button>
+      </div>
+      <pre class="output" id="g-delete-output"></pre>
+    </div>
+
+  </section>
+
+  <!-- ══════════ TAB: GUESSES ══════════ -->
+  <section id="tab-guesses" class="tab-content hidden">
+
+    <div class="card">
+      <h2>🔍 Hämta gissning (GET)</h2>
+      <div class="row">
+        <input type="number" id="guess-get-id" placeholder="Gissnings-ID" />
+        <button onclick="guessGet()">Hämta</button>
+      </div>
+      <pre class="output" id="guess-get-output"></pre>
+    </div>
+
+    <div class="card">
+      <h2>📋 Alla gissningar för ett spel (GET)</h2>
+      <div class="row">
+        <input type="number" id="guess-list-gameid" placeholder="Spel-ID" />
+        <button onclick="guessList()">Hämta alla</button>
+      </div>
+      <pre class="output" id="guess-list-output"></pre>
+    </div>
+
+    <div class="card">
+      <h2>🗑️ Ta bort gissning (DELETE)</h2>
+      <div class="row">
+        <input type="number" id="guess-delete-id" placeholder="Gissnings-ID" />
+        <button class="btn-danger" onclick="guessDelete()">Ta bort</button>
+      </div>
+      <pre class="output" id="guess-delete-output"></pre>
+    </div>
+
+  </section>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
+
