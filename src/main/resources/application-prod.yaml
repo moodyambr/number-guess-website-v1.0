@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${DB_URL}           # Sätts som env-variabel på EC2 i ~/app/.env
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate     # Ändrar ALDRIG schema i prod
+    show-sql: false          # Skriv inte ut SQL i loggar i prod
+    database-platform: org.hibernate.dialect.MySQLDialect
+
+server:
+  port: 8080                 # Standard Spring Boot port
+

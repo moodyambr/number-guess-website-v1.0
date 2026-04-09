@@ -299,6 +299,160 @@ API:et körs på `http://localhost:8080`
 
 ---
 
+---
+
+## 🚀 Deploy till AWS EC2 — Steg för steg
+
+> **Gratis verktyg:** EC2 t2.micro (free tier) + MySQL i Docker på samma instans.  
+> Ingen RDS, ingen Elastic Beanstalk — allt på en server.
+
+---
+
+### ✅ Filer som används vid deploy
+
+| Fil | Syfte |
+|---|---|
+| `deploy.sh` | Kör lokalt på Mac — bygger JAR och skickar till EC2 |
+| `ec2-setup.sh` | Kör EN GÅNG på EC2 — installerar Java 21 + Docker |
+| `ec2-start.sh` | Kör på EC2 — startar MySQL + Spring Boot |
+| `docker-compose.yaml` | Startar MySQL-container på EC2 |
+| `application-prod.yaml` | Prod-inställningar (ingen show-sql, ddl-auto: validate) |
+| `.env` (på EC2) | Produktionslösenord — skapas manuellt på servern, pushas EJ |
+
+---
+
+### 📋 Steg 1 — Starta en EC2-instans
+
+1. Gå till **AWS Console → EC2 → Launch Instance**
+2. Välj: **Amazon Linux 2023** (gratis tier-berättigad)
+3. Välj instanstyp: **t2.micro** (gratis 750h/månad)
+4. Skapa ett nytt nyckelpar → ladda ner `.pem`-filen
+5. Under **Security Group** — öppna dessa portar:
+
+| Port | Protokoll | Källa | Syfte |
+|------|-----------|-------|-------|
+| 22   | TCP | Din IP | SSH |
+| 8080 | TCP | 0.0.0.0/0 | Spring Boot API + Frontend |
+
+> ⚠️ Port 3306 (MySQL) ska **inte** öppnas publikt — MySQL nås bara internt av Spring Boot
+
+---
+
+### 📋 Steg 2 — Installera beroenden på EC2 (EN GÅNG)
+
+```bash
+# Kopiera setup-scriptet till EC2
+scp -i ~/.ssh/din-nyckel.pem ec2-setup.sh ec2-user@<EC2-IP>:~/
+
+# SSH in
+ssh -i ~/.ssh/din-nyckel.pem ec2-user@<EC2-IP>
+
+# Kör setup
+bash ec2-setup.sh
+
+# Logga ut och in igen (för Docker-rättigheter)
+exit
+```
+
+---
+
+### 📋 Steg 3 — Skapa `.env` på EC2 (EN GÅNG)
+
+```bash
+ssh -i ~/.ssh/din-nyckel.pem ec2-user@<EC2-IP>
+
+mkdir -p ~/app
+nano ~/app/.env
+```
+
+Fyll i med **riktiga lösenord** (ändra `<...>`):
+
+```dotenv
+# ── Spring Boot ──
+DB_URL=jdbc:mysql://localhost:3306/numbergame?serverTimezone=UTC
+DB_USERNAME=root
+DB_PASSWORD=<starkt-lösenord>
+
+# ── MySQL Docker-container ──
+MYSQL_ROOT_PASSWORD=<starkt-lösenord>
+MYSQL_DATABASE=numbergame
+```
+
+> ⚠️ `DB_PASSWORD` och `MYSQL_ROOT_PASSWORD` måste vara **samma värde**
+
+---
+
+### 📋 Steg 4 — Deploya från din Mac
+
+```bash
+# Gör scripts körbara (en gång)
+chmod +x deploy.sh ec2-setup.sh ec2-start.sh
+
+# Kör deploy
+EC2_HOST=<EC2-IP> KEY_FILE=~/.ssh/din-nyckel.pem ./deploy.sh
+```
+
+Scriptet gör automatiskt:
+1. Bygger JAR med Maven
+2. Kopierar JAR + `docker-compose.yaml` + `ec2-start.sh` till EC2
+3. Startar MySQL-container via Docker Compose
+4. Startar Spring Boot med `SPRING_PROFILES_ACTIVE=prod`
+
+---
+
+### 📋 Steg 5 — Verifiera att det fungerar
+
+```bash
+# Öppna i webbläsaren
+http://<EC2-IP>:8080
+
+# Eller testa API:et
+curl http://<EC2-IP>:8080/players
+```
+
+---
+
+### 🔁 Uppdatera appen (framtida deploys)
+
+```bash
+# Inga ändringar i AWS — kör bara:
+EC2_HOST=<EC2-IP> KEY_FILE=~/.ssh/din-nyckel.pem ./deploy.sh
+```
+
+---
+
+### 🛠️ Användbara kommandon på EC2
+
+```bash
+# Visa loggar
+tail -f ~/app/app.log
+
+# Stoppa appen
+kill $(cat ~/app/app.pid)
+
+# Starta om appen manuellt
+bash ~/app/ec2-start.sh
+
+# Kontrollera MySQL-container
+docker ps
+
+# Stoppa MySQL
+docker-compose -f ~/app/docker-compose.yaml down
+```
+
+---
+
+### 🔨 Bygg JAR lokalt utan deploy
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+./mvnw clean package -DskipTests
+```
+
+JAR-filen skapas i: `target/number-guess-0.0.1-SNAPSHOT.jar`
+
+---
+
 ## SQL Queries att komma ihåg
 
 ### Se vilken player som gjort vilken guess
@@ -362,3 +516,11 @@ LEFT JOIN game  ON player.id   = game.player_id
 LEFT JOIN guess ON game.id     = guess.game_id
 ORDER BY player.id, game.id, guess.id;
 ```
+### 🚀 Deploy till AWS EC2 — Snabbguide
+,,,
+1. AWS Console: Starta EC2 t2.micro + Security Group (port 22 + 8080)
+2. scp ec2-setup.sh → SSH → bash ec2-setup.sh
+3. Skapa ~/app/.env på EC2 med lösenord
+4. Lokalt: EC2_HOST=<IP> KEY_FILE=~/.ssh/key.pem ./deploy.sh
+5. Engång: Kopiera number-guess.service → systemctl enable
+,,,

@@ -1,0 +1,40 @@
+# docker-compose.prod.yaml — Kör hela stacken i Docker på EC2
+# Användning: docker-compose -f docker-compose.prod.yaml up -d
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: number-guess-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - db-data:/var/lib/mysql
+    restart: unless-stopped
+    # Port 3306 exponeras INTE — bara intern Docker-trafik
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: number-guess:latest       # Byggs lokalt: docker build -t number-guess:latest .
+    container_name: number-guess-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # mysql = service-namn ovan (Docker intern DNS)
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?serverTimezone=UTC
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db-data:
+

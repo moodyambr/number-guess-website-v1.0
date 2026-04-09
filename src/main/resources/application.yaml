@@ -10,7 +10,9 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update      # Auto-ändrar schema i dev
     database-platform: org.hibernate.dialect.MySQLDialect
-    show-sql: true
+    show-sql: true          # Visa SQL-loggar i dev
 
+server:
+  port: 8080
