@@ -5,29 +5,29 @@ Requires=docker.service
 
 [Service]
 Type=forking
-User=ec2-user
-WorkingDirectory=/home/ec2-user/app
+User=ubuntu
+WorkingDirectory=/home/ubuntu/app
 
 # Ladda env-variabler från .env
-EnvironmentFile=/home/ec2-user/app/.env
+EnvironmentFile=/home/ubuntu/app/.env
 
 # Sätt prod-profil
 Environment=SPRING_PROFILES_ACTIVE=prod
 
 # Starta script
-ExecStart=/bin/bash /home/ec2-user/app/ec2-start.sh
+ExecStart=/bin/bash /home/ubuntu/app/ec2-start.sh
 
 # PID-fil för att systemd ska kunna stoppa processen
-PIDFile=/home/ec2-user/app/app.pid
+PIDFile=/home/ubuntu/app/app.pid
 
 # Stoppa appen
-ExecStop=/bin/bash -c 'kill $(cat /home/ec2-user/app/app.pid)'
+ExecStop=/bin/bash -c 'kill $(cat /home/ubuntu/app/app.pid)'
 
 Restart=on-failure
 RestartSec=15s
 
-StandardOutput=append:/home/ec2-user/app/app.log
-StandardError=append:/home/ec2-user/app/app.log
+StandardOutput=append:/home/ubuntu/app/app.log
+StandardError=append:/home/ubuntu/app/app.log
 
 [Install]
 WantedBy=multi-user.target

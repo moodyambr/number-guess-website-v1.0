@@ -342,10 +342,10 @@ API:et körs på `http://localhost:8080`
 
 ```bash
 # Kopiera setup-scriptet till EC2
-scp -i ~/.ssh/din-nyckel.pem ec2-setup.sh ec2-user@<EC2-IP>:~/
+scp -i ~/.ssh/din-nyckel.pem ec2-setup.sh ubuntu@<EC2-IP>:~/
 
 # SSH in
-ssh -i ~/.ssh/din-nyckel.pem ec2-user@<EC2-IP>
+ssh -i ~/.ssh/din-nyckel.pem ubuntu@<EC2-IP>
 
 # Kör setup
 bash ec2-setup.sh
@@ -359,7 +359,7 @@ exit
 ### 📋 Steg 3 — Skapa `.env` på EC2 (EN GÅNG)
 
 ```bash
-ssh -i ~/.ssh/din-nyckel.pem ec2-user@<EC2-IP>
+ssh -i ~/.ssh/din-nyckel.pem ubuntu@<EC2-IP>
 
 mkdir -p ~/app
 nano ~/app/.env

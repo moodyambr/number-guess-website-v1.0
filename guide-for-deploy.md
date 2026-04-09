@@ -13,7 +13,8 @@
 | `docker-compose.yaml` | ✅ Fixad | Port `127.0.0.1:3306:3306` (ej publik), `healthcheck`, `restart: unless-stopped` |
 | `docker-compose.prod.yaml` | ✅ Ny | Kör app + MySQL i Docker på EC2 med intern DNS (`mysql`-hostname) |
 | `Dockerfile` | ✅ Ny | Multi-stage: Maven build → JRE runtime (minimalt image) |
-| `number-guess.service` | ✅ Ny | systemd-tjänst för auto-restart vid omstart |
+| `number-guess.service` | ✅ Uppdaterad | systemd-tjänst för auto-restart — anpassad för **Ubuntu** (`ubuntu`-användare) |
+| `ec2-setup.sh` | ✅ Uppdaterad | Anpassad för **Ubuntu** (`apt` istället för `dnf`, OpenJDK 21) |
 | `start.sh` | ⚠️ Lokal | Hårdkodad macOS Java-sökväg — används BARA lokalt, inte på EC2 |
 | `.env` | ✅ Korrekt | Pushas INTE till git (i .gitignore) |
 | `.env.example` | ✅ Korrekt | Mall för produktionsvärden |
@@ -27,7 +28,7 @@ Internet
     │
     ▼  port 8080
 ┌─────────────────────────────────┐
-│  EC2 t2.micro (Amazon Linux 2023)│
+│  EC2 t2.micro (Ubuntu 22.04)    │
 │  ┌─────────────────────────────┐│
 │  │  Spring Boot JAR (Java 21)  ││
 │  │  port 8080                  ││
@@ -78,7 +79,7 @@ Internet
 1. Gå till: **AWS Console → EC2 → Launch Instance**
 2. Inställningar:
    - **Name:** `number-guess-server`
-   - **AMI:** Amazon Linux 2023 (gratis)
+   - **AMI:** Ubuntu Server 22.04 LTS (gratis)
    - **Instance type:** t2.micro (gratis)
    - **Key pair:** Skapa nytt → ladda ner `.pem`-fil → spara i `~/.ssh/`
 3. **Security Group** — öppna dessa portar:
@@ -99,17 +100,17 @@ Internet
 
 ```bash
 # På din Mac — kopiera setup-scriptet
-scp -i ~/.ssh/din-nyckel.pem ec2-setup.sh ec2-user@<EC2-IP>:~/
+scp -i ~/.ssh/din-nyckel.pem ec2-setup.sh ubuntu@<EC2-IP>:~/
 
 # SSH in
-ssh -i ~/.ssh/din-nyckel.pem ec2-user@<EC2-IP>
+ssh -i ~/.ssh/din-nyckel.pem ubuntu@<EC2-IP>
 
 # Kör setup (installerar Java 21 + Docker + Docker Compose)
 bash ec2-setup.sh
 
 # Logga ut och in igen för Docker-rättigheter
 exit
-ssh -i ~/.ssh/din-nyckel.pem ec2-user@<EC2-IP>
+ssh -i ~/.ssh/din-nyckel.pem ubuntu@<EC2-IP>
 ```
 
 ---
@@ -118,7 +119,7 @@ ssh -i ~/.ssh/din-nyckel.pem ec2-user@<EC2-IP>
 
 ```bash
 # SSH in
-ssh -i ~/.ssh/din-nyckel.pem ec2-user@<EC2-IP>
+ssh -i ~/.ssh/din-nyckel.pem ubuntu@<EC2-IP>
 
 # Skapa app-mapp och .env
 mkdir -p ~/app
@@ -166,10 +167,10 @@ EC2_HOST=<EC2-IP> KEY_FILE=~/.ssh/din-nyckel.pem ./deploy.sh
 
 ```bash
 # Kopiera service-filen till EC2
-scp -i ~/.ssh/din-nyckel.pem number-guess.service ec2-user@<EC2-IP>:~/
+scp -i ~/.ssh/din-nyckel.pem number-guess.service ubuntu@<EC2-IP>:~/
 
 # SSH in och aktivera
-ssh -i ~/.ssh/din-nyckel.pem ec2-user@<EC2-IP>
+ssh -i ~/.ssh/din-nyckel.pem ubuntu@<EC2-IP>
 
 sudo cp ~/number-guess.service /etc/systemd/system/
 sudo systemctl daemon-reload
@@ -192,7 +193,7 @@ curl http://<EC2-IP>:8080/players
 http://<EC2-IP>:8080
 
 # Visa loggar live
-ssh -i ~/.ssh/key.pem ec2-user@<EC2-IP> "tail -f ~/app/app.log"
+ssh -i ~/.ssh/key.pem ubuntu@<EC2-IP> "tail -f ~/app/app.log"
 ```
 
 ---
@@ -215,10 +216,10 @@ docker build -t number-guess:latest .
 docker save number-guess:latest | gzip > number-guess-image.tar.gz
 
 # Kopiera till EC2
-scp -i ~/.ssh/din-nyckel.pem number-guess-image.tar.gz docker-compose.prod.yaml ec2-user@<EC2-IP>:~/app/
+scp -i ~/.ssh/din-nyckel.pem number-guess-image.tar.gz docker-compose.prod.yaml ubuntu@<EC2-IP>:~/app/
 
 # SSH in och ladda imagen
-ssh -i ~/.ssh/din-nyckel.pem ec2-user@<EC2-IP>
+ssh -i ~/.ssh/din-nyckel.pem ubuntu@<EC2-IP>
 cd ~/app
 docker load < number-guess-image.tar.gz
 ```
@@ -356,10 +357,10 @@ java -version   # Ska visa 21
 
 ```bash
 # Spara den gamla JAR-filen INNAN deploy
-ssh -i ~/.ssh/key.pem ec2-user@<EC2-IP> "cp ~/app/number-guess-0.0.1-SNAPSHOT.jar ~/app/number-guess-backup.jar"
+ssh -i ~/.ssh/key.pem ubuntu@<EC2-IP> "cp ~/app/number-guess-0.0.1-SNAPSHOT.jar ~/app/number-guess-backup.jar"
 
 # Om ny version kraschar — återställ
-ssh -i ~/.ssh/key.pem ec2-user@<EC2-IP> << 'EOF'
+ssh -i ~/.ssh/key.pem ubuntu@<EC2-IP> << 'EOF'
   kill $(cat ~/app/app.pid) 2>/dev/null || true
   cp ~/app/number-guess-backup.jar ~/app/number-guess-0.0.1-SNAPSHOT.jar
   bash ~/app/ec2-start.sh
@@ -401,7 +402,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 EC2_HOST=<IP> KEY_FILE=~/.ssh/key.pem ./deploy.sh
 
 # SSH in
-ssh -i ~/.ssh/key.pem ec2-user@<EC2-IP>
+ssh -i ~/.ssh/key.pem ubuntu@<EC2-IP>
 ```
 
 ### EC2 (daglig drift)
@@ -428,10 +429,10 @@ docker-compose down
 
 ```
 Före första deploy:
-[ ] EC2 t2.micro lanserad (Amazon Linux 2023)
+[ ] EC2 t2.micro lanserad (Ubuntu Server 22.04 LTS)
 [ ] Security Group: port 22 (din IP) + port 8080 (0.0.0.0/0)
 [ ] .pem-fil nedladdad och i ~/.ssh/ med rättigheter: chmod 400 key.pem
-[ ] ec2-setup.sh kopierat och kört på EC2
+[ ] ec2-setup.sh kopierat och kört på EC2 (installerar Java 21 + Docker via apt)
 [ ] ~/app/.env skapad på EC2 med riktiga värden
 [ ] chmod +x deploy.sh ec2-setup.sh ec2-start.sh (på Mac)
 
@@ -445,8 +446,9 @@ Engångsinställning (auto-restart):
 [ ] sudo systemctl enable number-guess
 ```
 
-1. AWS Console: Starta EC2 t2.micro + Security Group (port 22 + 8080)
-2. scp ec2-setup.sh → SSH → bash ec2-setup.sh
-3. Skapa ~/app/.env på EC2 med lösenord
-4. Lokalt: EC2_HOST=<IP> KEY_FILE=~/.ssh/key.pem ./deploy.sh
-5. Engång: Kopiera number-guess.service → systemctl enable
+1. AWS Console: Starta EC2 t2.micro + **Ubuntu 22.04 LTS** + Security Group (port 22 + 8080)
+2. `scp ec2-setup.sh ubuntu@<IP>:~/` → SSH → `bash ec2-setup.sh`
+3. Logga ut och in igen (Docker-rättigheter): `exit` → `ssh ...`
+4. Skapa `~/app/.env` på EC2 med lösenord
+5. Lokalt: `EC2_HOST=<IP> KEY_FILE=~/.ssh/key.pem ./deploy.sh`
+6. Engång: Kopiera `number-guess.service` → `systemctl enable number-guess`

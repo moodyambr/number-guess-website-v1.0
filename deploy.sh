@@ -8,7 +8,7 @@ if [ -z "$EC2_HOST" ] || [ -z "$KEY_FILE" ]; then
   echo "Usage: EC2_HOST=<ip> KEY_FILE=~/.ssh/key.pem ./deploy.sh"
   exit 1
 fi
-EC2_USER="${EC2_USER:-ec2-user}"
+EC2_USER="${EC2_USER:-ubuntu}"
 SSH_OPTS="-i $KEY_FILE -o StrictHostKeyChecking=no"
 echo "=== Deploying to $EC2_USER@$EC2_HOST ==="
 echo "Building JAR..."
